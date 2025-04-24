@@ -10,6 +10,7 @@ module Header_Parser (
     output logic [ 7:0] Window_Descriptor,       // 0-1 bytes
     output logic [31:0] Dictionary_ID,           // 0-4 bytes
     output logic [63:0] Frame_Content_Size,      // 0-8 bytes
+    output logic [ 7:0] extra_byte // Unused byte, sent back to system for processing
 );
 
     typedef enum logic [2:0] {
@@ -43,13 +44,17 @@ module Header_Parser (
         end
         else begin
             state <= next_state;
-            if (start && state == IDLE) begin
-                magic_buffer[7:0] <= data_in[15:8];
-                magic_buffer[15:8] <= data_in[7:0];
+            if (state == IDLE) begin
+                if (start) begin
+                    magic_buffer[7:0] <= data_in[15:8];
+                    magic_buffer[15:8] <= data_in[7:0];
+                end
                 Window_Descriptor_Bytes <= 1'b0;
                 Dictionary_ID_Bytes <= 3'b0;
                 Frame_Content_Size_Bytes <= 4'b0;
                 count <= 4'b0;
+                sizes <= 1'b0;
+                extra_byte <= 8'b0;
             end
             else if (state == READ_MAGIC_NUMBER) begin
                 magic_buffer[23:16] <= data_in[15:8];
@@ -68,6 +73,7 @@ module Header_Parser (
                 if (!(data_in[5])) begin
                     Window_Descriptor_Bytes <= 1;
                     Window_Descriptor <= data_in[15:8];
+                    sizes[7] <= 1;
                 end
 
                 // Dictionary_ID_flag   
@@ -77,14 +83,18 @@ module Header_Parser (
                     end
                     2'b01: begin
                         Dictionary_ID_Bytes <= 3'd1;
+                        sizes[6:4] <= 3'd1;
                     end
                     2'b10: begin
                         Dictionary_ID_Bytes <= 3'd2;
+                        sizes[6:4] <= 3'd2;
                     end
                     2'b11: begin
                         Dictionary_ID_Bytes <= 3'd4;
+                        sizes[6:4] <= 3'd4;
                     end
                 endcase
+
 
                 if (data_in[5] && (data_in[1:0] != 2'b00)) begin
                     Dictionary_ID[7:0] <= data_in[15:8];
@@ -93,16 +103,20 @@ module Header_Parser (
                 // Frame_Content_Size_flag
                 case (data_in[7:6])
                     2'b00: begin
-                        Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag
+                        Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag\
+                        sizes[3:0] <= {3'b0, data_in[5]};
                     end
                     2'b01: begin
                         Frame_Content_Size_Bytes <= 4'd2;
+                        sizes[3:0] <= 4'd2;
                     end
                     2'b10: begin
                         Frame_Content_Size_Bytes <= 4'd4;
+                        sizes[3:0] <= 4'd4;
                     end
                     2'b11: begin
                         Frame_Content_Size_Bytes <= 4'd8;
+                        sizes[3:0] <= 4'd8;
                     end
                 endcase
 
@@ -111,8 +125,9 @@ module Header_Parser (
                     Frame_Content_Size[7:0] <= data_in[15:8];
                 end
 
-                // First two bytes have been read
+                // First non-header byte has been read
                 count <= 1;
+
             end
 
             else if (state == READ_REMAINING_BYTES) begin
@@ -183,9 +198,10 @@ module Header_Parser (
                             end
                         endcase
                     end
+
                     // Dict-Nothing
                     else begin
-                        // TODO: implement output signal for this
+                        extra_byte <= data_in[15:8];
                     end
                 end
 
@@ -249,7 +265,7 @@ module Header_Parser (
                     end
                     // FCS-Nothing
                     else begin
-                        // TODO: add logic
+                        extra_byte <= data_in[15:8];
                     end
                 end
 
@@ -258,10 +274,38 @@ module Header_Parser (
         end
     end
 
+    typedef enum logic [2:0] {
+        IDLE,
+        READ_MAGIC_NUMBER,
+        READ_FRAME_HEADER_DESCRIPTOR,
+        READ_REMAINING_BYTES
+    } state_t;
+
+    assign finished = counter >= Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes;
     always_comb begin
+        case (state)
+            IDLE: begin
+                if (start) begin
+                    next_state = READ_MAGIC_NUMBER;
+                end
+            end
+            READ_MAGIC_NUMBER: begin
+                next_state = READ_FRAME_HEADER_DESCRIPTOR;
+            end
+            READ_FRAME_HEADER_DESCRIPTOR: begin
+                next_state = READ_REMAINING_BYTES;
+            end
+            READ_REMAINING_BYTES: begin
+                if (finished) begin
+                    next_state = IDLE;
+                end
+                else begin
+                    next_state = READ_REMAINING_BYTES;
+                end
+            end
+        endcase
 
     end
 endmodule
-
 
 // TODO: analyze power usage for saving calculations of byte index as logic vectors
