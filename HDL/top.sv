@@ -26,9 +26,11 @@ module Header_Parser (
     logic [1:0] Frame_Content_Size_flag, Dictionary_ID_flag;
     logic Single_Segment_flag, Content_Checksum_flag;
 
-    // logic Window_Descriptor_Bytes; // Absent or read during second cycle --> no need to track
+    logic Window_Descriptor_Bytes;
     logic [2:0] Dictionary_ID_Bytes
     logic [3:0] Frame_Content_Size_Bytes;
+
+    logic [4:0] count;
 
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
@@ -44,8 +46,10 @@ module Header_Parser (
             if (start && state == IDLE) begin
                 magic_buffer[7:0] <= data_in[15:8];
                 magic_buffer[15:8] <= data_in[7:0];
+                Window_Descriptor_Bytes <= 1'b0;
                 Dictionary_ID_Bytes <= 3'b0;
                 Frame_Content_Size_Bytes <= 4'b0;
+                count <= 4'b0;
             end
             else if (state == READ_MAGIC_NUMBER) begin
                 magic_buffer[23:16] <= data_in[15:8];
@@ -62,95 +66,202 @@ module Header_Parser (
                 // Find the remaining number of bytes
                 // Read Window_Descriptor_Bytes if present
                 if (!(data_in[5])) begin
+                    Window_Descriptor_Bytes <= 1;
                     Window_Descriptor <= data_in[15:8];
                 end
 
-                // If Window_Descriptor_Bytes, this can be counted normally
-                if (!(data_in[5])) begin
-                    // Dictionary_ID_flag   
-                    case (data_in[1:0])
-                        2'b00: begin
-                            Dictionary_ID_Bytes <= 3'd0;
-                        end
-                        2'b01: begin
-                            Dictionary_ID_Bytes <= 3'd1;
-                        end
-                        2'b10: begin
-                            Dictionary_ID_Bytes <= 3'd2;
-                        end
-                        2'b11: begin
-                            Dictionary_ID_Bytes <= 3'd4;
-                        end
-                    endcase
-                end
-                // If no Window_Descriptor_Bytes to read, one of these must be read
-                else begin
-                    case (data_in[1:0])
-                        2'b00: begin
-                            Dictionary_ID_Bytes <= 3'd0;
-                        end
-                        2'b01: begin
-                            Dictionary_ID_Bytes <= 3'd0;
-                        end
-                        2'b10: begin
-                            Dictionary_ID_Bytes <= 3'd1;
-                        end
-                        2'b11: begin
-                            Dictionary_ID_Bytes <= 3'd3;
-                        end
-                    endcase
-
-                    // Read to output
-                    if (data_in[1:0] != 2'b00) begin
-                        Dictionary_ID <= data_in[15:8];
+                // Dictionary_ID_flag   
+                case (data_in[1:0])
+                    2'b00: begin
+                        Dictionary_ID_Bytes <= 3'd0;
                     end
+                    2'b01: begin
+                        Dictionary_ID_Bytes <= 3'd1;
+                    end
+                    2'b10: begin
+                        Dictionary_ID_Bytes <= 3'd2;
+                    end
+                    2'b11: begin
+                        Dictionary_ID_Bytes <= 3'd4;
+                    end
+                endcase
+
+                if (data_in[5] && (data_in[1:0] != 2'b00)) begin
+                    Dictionary_ID[7:0] <= data_in[15:8];
                 end
 
-                if (!(data_in[5]) || (data_in[1:0] != 2'b00)) begin
-                    // Frame_Content_Size_flag
-                    case (data_in[7:6])
-                        2'b00: begin
-                            Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag
-                        end
-                        2'b01: begin
-                            Frame_Content_Size_Bytes <= 4'd2;
-                        end
-                        2'b10: begin
-                            Frame_Content_Size_Bytes <= 4'd4;
-                        end
-                        2'b11: begin
-                            Frame_Content_Size_Bytes <= 4'd8;
-                        end
-                    endcase
-                end
+                // Frame_Content_Size_flag
+                case (data_in[7:6])
+                    2'b00: begin
+                        Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag
+                    end
+                    2'b01: begin
+                        Frame_Content_Size_Bytes <= 4'd2;
+                    end
+                    2'b10: begin
+                        Frame_Content_Size_Bytes <= 4'd4;
+                    end
+                    2'b11: begin
+                        Frame_Content_Size_Bytes <= 4'd8;
+                    end
+                endcase
+
                 // Read this if no Window_Descriptor_Bytes or Frame_Content_Size_Bytes available to read
-                else begin
-                    case (data_in[7:6])
-                        2'b00: begin
-                            Frame_Content_Size_Bytes <= 4'b0;
-                            finished <= 1; // If no bytes to read here, we are done
-                        end
-                        2'b01: begin
-                            Frame_Content_Size_Bytes <= 4'd1;
-                        end
-                        2'b10: begin
-                            Frame_Content_Size_Bytes <= 4'd3;
-                        end
-                        2'b11: begin
-                            Frame_Content_Size_Bytes <= 4'd7;
-                        end
-                    endcase
-
-                    // Read to output
-                    if (data_in[7:6] != 2'b00) begin
-                        Frame_Content_Size <= data_in[15:8];
-                    end
+                if (data_in[5] && (data_in[1:0] == 2'b00) && (data_in[7:6] != 2'b00)) begin
+                    Frame_Content_Size[7:0] <= data_in[15:8];
                 end
+
+                // First two bytes have been read
+                count <= 1;
             end
 
             else if (state == READ_REMAINING_BYTES) begin
-                
+                // Read Dictionary_ID_Bytes: Convert from little endian
+                if (Window_Descriptor_Bytes + Dictionary_ID_Bytes > count) begin
+
+                    case (count - Window_Descriptor_Bytes)
+                        2'b00: begin
+                            Dictionary_ID[7:0] <= data_in[7:0];
+                        end
+                        2'b01: begin
+                            Dictionary_ID[15:8] <= data_in[7:0];
+                        end
+                        2'b10: begin
+                            Dictionary_ID[23:16] <= data_in[7:0];
+                        end
+                        2'b11: begin
+                            Dictionary_ID[31:24] <= data_in[7:0];
+                        end
+                    endcase
+
+                    // Handle these cases here: Dict-Dict, Dict-FCS, Dict-Nothing
+
+                    // Dict-Dict
+                    if (Window_Descriptor_Bytes + Dictionary_ID_Bytes > count + 1) begin
+
+                        case (count + 1 - Window_Descriptor_Bytes)
+                            2'b00: begin
+                                // Should not be reached
+                            end
+                            2'b01: begin
+                                Dictionary_ID[15:8] <= data_in[15:8];
+                            end
+                            2'b10: begin
+                                Dictionary_ID[23:16] <= data_in[15:8];
+                            end
+                            2'b11: begin
+                                Dictionary_ID[31:24] <= data_in[15:8];
+                            end
+                        endcase
+                    end
+                    // Dict-FCS
+                    else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count + 1) begin
+                        case (count + 1 - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
+                            3'b000: begin
+                                Frame_Content_Size[7:0] <= data_in[15:8];
+                            end
+                            3'b001: begin
+                                Frame_Content_Size[15:8] <= data_in[15:8];
+                            end
+                            3'b010: begin
+                                Frame_Content_Size[23:16] <= data_in[15:8];
+                            end
+                            3'b011: begin
+                                Frame_Content_Size[31:24] <= data_in[15:8];
+                            end
+                            3'b100: begin
+                                Frame_Content_Size[39:32] <= data_in[15:8];
+                            end
+                            3'b101: begin
+                                Frame_Content_Size[47:40] <= data_in[15:8];
+                            end
+                            3'b110: begin
+                                Frame_Content_Size[55:48] <= data_in[15:8];
+                            end
+                            3'b111: begin
+                                Frame_Content_Size[63:56] <= data_in[15:8];
+                            end
+                        endcase
+                    end
+                    // Dict-Nothing
+                    else begin
+                        // TODO: implement output signal for this
+                    end
+                end
+
+                // FCS-FCS and FCS-Nothing cases
+                else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count) begin
+                    case (count - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
+                       3'b000: begin
+                            Frame_Content_Size[7:0] <= data_in[7:0];
+                        end
+                        3'b001: begin
+                            Frame_Content_Size[15:8] <= data_in[7:0];
+                        end
+                        3'b010: begin
+                            Frame_Content_Size[23:16] <= data_in[7:0];
+                        end
+                        3'b011: begin
+                            Frame_Content_Size[31:24] <= data_in[7:0];
+                        end
+                        3'b100: begin
+                            Frame_Content_Size[39:32] <= data_in[7:0];
+                        end
+                        3'b101: begin
+                            Frame_Content_Size[47:40] <= data_in[7:0];
+                        end
+                        3'b110: begin
+                            Frame_Content_Size[55:48] <= data_in[7:0];
+                        end
+                        3'b111: begin
+                            Frame_Content_Size[63:56] <= data_in[7:0];
+                        end
+                    endcase
+
+                    // FCS-FCS
+                    if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count + 1) begin
+                        case (count + 1 - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
+                            3'b000: begin
+                                Frame_Content_Size[7:0] <= data_in[15:8];
+                            end
+                            3'b001: begin
+                                Frame_Content_Size[15:8] <= data_in[15:8];
+                            end
+                            3'b010: begin
+                                Frame_Content_Size[23:16] <= data_in[15:8];
+                            end
+                            3'b011: begin
+                                Frame_Content_Size[31:24] <= data_in[15:8];
+                            end
+                            3'b100: begin
+                                Frame_Content_Size[39:32] <= data_in[15:8];
+                            end
+                            3'b101: begin
+                                Frame_Content_Size[47:40] <= data_in[15:8];
+                            end
+                            3'b110: begin
+                                Frame_Content_Size[55:48] <= data_in[15:8];
+                            end
+                            3'b111: begin
+                                Frame_Content_Size[63:56] <= data_in[15:8];
+                            end
+                        endcase
+                    end
+                    // FCS-Nothing
+                    else begin
+                        // TODO: add logic
+                    end
+                end
+
+                count += 2;
             end
         end
     end
+
+    always_comb begin
+
+    end
 endmodule
+
+
+// TODO: analyze power usage for saving calculations of byte index as logic vectors
