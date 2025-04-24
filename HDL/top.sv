@@ -5,6 +5,11 @@ module Header_Parser (
     input  logic [15:0] data_in,       // 2 bytes per cycle
 
     output logic        finished,
+    output logic [ 7:0] sizes, // {window bytes, dictionary ID bytes, FCS bytes}
+    output logic [ 7:0] Frame_Header_Descriptor, // 1 byte
+    output logic [ 7:0] Window_Descriptor,       // 0-1 bytes
+    output logic [31:0] Dictionary_ID,           // 0-4 bytes
+    output logic [63:0] Frame_Content_Size,      // 0-8 bytes
 );
 
     typedef enum logic [2:0] {
