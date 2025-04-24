@@ -59,41 +59,87 @@ module Header_Parser (
                 // Find the remaining number of bytes
 
                 Window_Descriptor_Bytes <= !(data_in[5]);
+                // TODO: if this true, read it and set byte tracker to 0
 
-                // Dictionary_ID_flag
-                case (data_in[1:0])
-                    2'b00: begin
-                        Dictionary_ID_Bytes <= 3'd0;
-                    end
-                    2'b01: begin
-                        Dictionary_ID_Bytes <= 3'd1;
-                    end
-                    2'b10: begin
-                        Dictionary_ID_Bytes <= 3'd2;
-                    end
-                    2'b11: begin
-                        Dictionary_ID_Bytes <= 3'd4;
-                    end
-                endcase
+                // If Window_Descriptor_Bytes, this can be counted normally
+                if (!(data_in[5])) begin
+                    // Dictionary_ID_flag   
+                    case (data_in[1:0])
+                        2'b00: begin
+                            Dictionary_ID_Bytes <= 3'd0;
+                        end
+                        2'b01: begin
+                            Dictionary_ID_Bytes <= 3'd1;
+                        end
+                        2'b10: begin
+                            Dictionary_ID_Bytes <= 3'd2;
+                        end
+                        2'b11: begin
+                            Dictionary_ID_Bytes <= 3'd4;
+                        end
+                    endcase
+                end
+                // If no Window_Descriptor_Bytes to read, one of these must be read
+                else begin
+                    case (data_in[1:0])
+                        2'b00: begin
+                            Dictionary_ID_Bytes <= 3'd0;
+                        end
+                        2'b01: begin
+                            Dictionary_ID_Bytes <= 3'd0;
+                        end
+                        2'b10: begin
+                            Dictionary_ID_Bytes <= 3'd1;
+                        end
+                        2'b11: begin
+                            Dictionary_ID_Bytes <= 3'd3;
+                        end
+                    endcase
 
-                // Frame_Content_Size_flag
-                case (data_in[7:6])
-                    2'b00: begin
-                        Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag
+                    if (data_in[1:0] != 2'b00) begin
+                        // TODO: read this into output
                     end
-                    2'b01: begin
-                        Frame_Content_Size_Bytes <= 4'd2;
-                    end
-                    2'b10: begin
-                        Frame_Content_Size_Bytes <= 4'd4;
-                    end
-                    2'b11: begin
-                        Frame_Content_Size_Bytes <= 4'd8;
-                    end
-                endcase
+                end
 
-                // TODO: do next available byte here
+                if (!(data_in[5]) || data_in[1:0] != 2'b00) begin
+                    // Frame_Content_Size_flag
+                    case (data_in[7:6])
+                        2'b00: begin
+                            Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag
+                        end
+                        2'b01: begin
+                            Frame_Content_Size_Bytes <= 4'd2;
+                        end
+                        2'b10: begin
+                            Frame_Content_Size_Bytes <= 4'd4;
+                        end
+                        2'b11: begin
+                            Frame_Content_Size_Bytes <= 4'd8;
+                        end
+                    endcase
+                end
+                // Read this if no Window_Descriptor_Bytes or Frame_Content_Size_Bytes available to read
+                else begin
+                    case (data_in[7:6])
+                        2'b00: begin
+                            Frame_Content_Size_Bytes <= 0;
+                            finished <= 1; // If no bytes to read here, we are done
+                        end
+                        2'b01: begin
+                            Frame_Content_Size_Bytes <= 4'd1;
+                        end
+                        2'b10: begin
+                            Frame_Content_Size_Bytes <= 4'd3;
+                        end
+                        2'b11: begin
+                            Frame_Content_Size_Bytes <= 4'd7;
+                        end
+                    endcase
 
+                    if (data_in[7:6] != 2'b00) begin
+                        // TODO: read this into output
+                    end
+                end
 
             end
         end
