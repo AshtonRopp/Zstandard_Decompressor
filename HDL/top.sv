@@ -16,10 +16,7 @@ module Header_Parser (
         IDLE,
         READ_MAGIC_NUMBER,
         READ_FRAME_HEADER_DESCRIPTOR,
-        READ_WINDOW_DESCRIPTOR,
-        READ_DICTIONARY_ID,
-        READ_FRAME_CONTENT_SIZE,
-        DONE
+        READ_REMAINING_BYTES
     } state_t;
 
     state_t state, next_state;
@@ -29,7 +26,7 @@ module Header_Parser (
     logic [1:0] Frame_Content_Size_flag, Dictionary_ID_flag;
     logic Single_Segment_flag, Content_Checksum_flag;
 
-    logic Window_Descriptor_Bytes;
+    // logic Window_Descriptor_Bytes; // Absent or read during second cycle --> no need to track
     logic [2:0] Dictionary_ID_Bytes
     logic [3:0] Frame_Content_Size_Bytes;
 
@@ -47,7 +44,6 @@ module Header_Parser (
             if (start && state == IDLE) begin
                 magic_buffer[7:0] <= data_in[15:8];
                 magic_buffer[15:8] <= data_in[7:0];
-                Window_Descriptor_Bytes <= 0;
                 Dictionary_ID_Bytes <= 3'b0;
                 Frame_Content_Size_Bytes <= 4'b0;
             end
@@ -61,10 +57,13 @@ module Header_Parser (
                 Content_Checksum_flag <= data_in[2];
                 Dictionary_ID_flag <= data_in[1:0];
 
-                // Find the remaining number of bytes
+                Frame_Header_Descriptor <= data_in[7:0];
 
-                Window_Descriptor_Bytes <= !(data_in[5]);
-                // TODO: if this true, read it and set byte tracker to 0
+                // Find the remaining number of bytes
+                // Read Window_Descriptor_Bytes if present
+                if (!(data_in[5])) begin
+                    Window_Descriptor <= data_in[15:8];
+                end
 
                 // If Window_Descriptor_Bytes, this can be counted normally
                 if (!(data_in[5])) begin
@@ -101,12 +100,13 @@ module Header_Parser (
                         end
                     endcase
 
+                    // Read to output
                     if (data_in[1:0] != 2'b00) begin
-                        // TODO: read this into output
+                        Dictionary_ID <= data_in[15:8];
                     end
                 end
 
-                if (!(data_in[5]) || data_in[1:0] != 2'b00) begin
+                if (!(data_in[5]) || (data_in[1:0] != 2'b00)) begin
                     // Frame_Content_Size_flag
                     case (data_in[7:6])
                         2'b00: begin
@@ -127,7 +127,7 @@ module Header_Parser (
                 else begin
                     case (data_in[7:6])
                         2'b00: begin
-                            Frame_Content_Size_Bytes <= 0;
+                            Frame_Content_Size_Bytes <= 4'b0;
                             finished <= 1; // If no bytes to read here, we are done
                         end
                         2'b01: begin
@@ -141,10 +141,14 @@ module Header_Parser (
                         end
                     endcase
 
+                    // Read to output
                     if (data_in[7:6] != 2'b00) begin
-                        // TODO: read this into output
+                        Frame_Content_Size <= data_in[15:8];
                     end
                 end
+            end
+
+            else if (state == READ_REMAINING_BYTES) begin
 
             end
         end
