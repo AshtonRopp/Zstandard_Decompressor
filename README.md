@@ -48,7 +48,8 @@ From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84
 To process this input via a System Verilog simulation, it must be converted to a test vector. This can be done via the below command.
 
 ```
-head -c 32 input.zst | hexdump -v -e '1/1 "%02x\n"' > input.data
+head -c 32 input.zst | xxd -p -c 2 > input.data
 ```
 
-These arguments make hexdump output one byte (two hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only print the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
+We can use xxd to print two bytes (4 hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only print the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
+
