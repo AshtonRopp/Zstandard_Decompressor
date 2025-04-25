@@ -2,7 +2,7 @@
 This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor. At this point in time, I have finished the header parser and plan to begin work on the huffman and entropy decoders. Further, I plan to use Cadence tools for place and route, timing analysis, and PPA.
 
 # Setup
-To install/make zstd, and generate/compress the test file, source the below script.
+To install/make zstd and generate/compress the test file, source the below script.
 
 ```
 source setup.sh
@@ -15,7 +15,7 @@ zstd defines a frame (compressed file) as shown below. This table, and other key
 |:--------------:|:--------------:|:----------:| ---------------|:--------------------:|
 |  4 bytes       |  2-14 bytes    |  n bytes   |                |     0-4 bytes        |
 
-To define an RTL structure capable of processing this data, we need to dissect the `Magic_Number` and `Frame_Header` fields. The `Magic_Number` is just a constant added to the beginning of the file which indicates that it is a zstd compressed file. This can be ignored for the implementation. The `Frame_Header` field is the one that must be processed. To view these bytes in the compressed test file, we can run the below command
+To define an RTL structure capable of processing this data, we need to dissect the `Magic_Number` and `Frame_Header` fields. The `Magic_Number` is just a constant added to the beginning of the file which indicates that it is a zstd compressed frame. This can be ignored for the implementation. The `Frame_Header` field is the one that must be processed. To view these bytes in the compressed test file, we can run the below command
 
 ```
 >>> head -c 32 input.zst | hexdump -C
@@ -69,6 +69,23 @@ We can analyze the test vector file and acquire the following table. Note, the f
 | 1 byte                    | 1 byte                | 0 bytes (little-endian) | 4 bytes (little-endian) |
 | 0x84                      | 0x58                  | 0 bytes                 | 0x00008000              |
 
-Notes:
-- Bottom part of output vectors are empty if unused
-- If FCS_Field_Size == 2, receiver of data is responsible for adding the [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size).
+
+We can then run the simulation and compare the results. We can see that all expected values are present.
+
+
+| ![](Images/ModelSim.png) |
+|:--:|
+| *Simulation Results* |
+</center>
+
+
+## Next Steps
+- **Continue work on decompression components**
+  - Block header parser
+  - Huffman decoder
+  - FSE decoder
+- **Interface header parser with future modules**
+  - Use `sizes` output to read upper bytes and ignore unused lower ones
+  -  If FCS_Field_Size == 2, receiver of data is responsible for adding an [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size)
+- **Analyze PPA metrics**
+  - Continue to learn PD tools over summer

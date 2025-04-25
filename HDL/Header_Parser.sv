@@ -2,7 +2,7 @@ module Header_Parser (
     input  logic        clk,
     input  logic        reset,
     input  logic        start,
-    input  logic [15:0] data_in,       // 2 bytes per cycle
+    input  logic [15:0] data_in, // 2 bytes per cycle
 
     output logic        finished,
     output logic [ 7:0] sizes, // {window bytes, dictionary ID bytes, FCS bytes}
@@ -21,7 +21,7 @@ module Header_Parser (
     } state_t;
 
     state_t state, next_state;
-    logic [31:0] magic_buffer;
+    logic [31:0] magic_number;
     logic [2:0]  byte_index;
 
     logic [1:0] Frame_Content_Size_flag, Dictionary_ID_flag;
@@ -37,14 +37,14 @@ module Header_Parser (
         if (reset) begin
             state        <= IDLE;
             byte_index   <= 0;
-            magic_buffer <= 0;
+            magic_number <= 0;
         end
         else begin
             state <= next_state;
             if (state == IDLE) begin
                 if (start) begin
-                    magic_buffer[7:0] <= data_in[15:8];
-                    magic_buffer[15:8] <= data_in[7:0];
+                    magic_number[31:24] <= data_in[15:8];
+                    magic_number[23:16] <= data_in[7:0];
                 end
                 Frame_Header_Descriptor <= 8'b0;
                 Window_Descriptor <= 8'b0;
@@ -59,8 +59,8 @@ module Header_Parser (
                 extra_byte <= 8'b0;
             end
             else if (state == READ_MAGIC_NUMBER) begin
-                magic_buffer[23:16] <= data_in[15:8];
-                magic_buffer[31:24] <= data_in[7:0];
+                magic_number[15:8] <= data_in[15:8];
+                magic_number[7:0] <= data_in[7:0];
             end
             else if (state == READ_FRAME_HEADER_DESCRIPTOR) begin
                 Frame_Content_Size_flag <= data_in[15:14];
@@ -301,6 +301,5 @@ module Header_Parser (
                 end
             end
         endcase
-
     end
 endmodule
