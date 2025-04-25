@@ -1,8 +1,9 @@
-`timescale 1ns / 1ps
-
 module tb_Header_Parser();
 
-    logic clk;
+    logic clk = 0;
+    always #5 clk = ~clk; // Clock toggles every 5ns
+
+    // Other signals
     logic reset;
     logic start;
     logic [15:0] data_in;
@@ -15,7 +16,6 @@ module tb_Header_Parser();
     logic [63:0] Frame_Content_Size;
     logic [7:0] extra_byte;
 
-    // Instantiate DUT
     Header_Parser dut (
         .clk(clk),
         .reset(reset),
@@ -30,36 +30,34 @@ module tb_Header_Parser();
         .extra_byte(extra_byte)
     );
 
-    // Clock generation
-    initial clk = 0;
-    always #5 clk = ~clk; // 100MHz clock
-
-    // ROM to hold test data (input.data: 2 bytes per line in hex)
     logic [15:0] rom [0:31];
     integer i;
 
     initial begin
-        $display("Starting testbench...");
+        $display("Starting Header_Parser test...");
         $readmemh("input.data", rom);
 
-        // Initialize inputs
         reset = 1;
         start = 0;
         data_in = 16'h0000;
-        #20;
+        repeat (2) @(posedge clk);
         reset = 0;
-        #10;
-        start = 1;
 
-        // Send data from ROM
         for (i = 0; i < 32; i++) begin
             @(posedge clk);
+            if(i == 1) begin
+                start = 0;
+            end
+            if (i == 0) begin
+                start = 1;
+            end
             data_in = rom[i];
+            if (finished) begin
+                break;
+            end
         end
 
-        start = 0;
-        @(posedge clk);
-        @(posedge clk);
+        // repeat (10) @(posedge clk);
 
         $display("==== Results ====");
         $display("Finished:               %0d", finished);
@@ -71,5 +69,4 @@ module tb_Header_Parser();
         $display("Extra Byte:             0x%0h", extra_byte);
         $finish;
     end
-
 endmodule

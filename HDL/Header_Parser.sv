@@ -46,6 +46,11 @@ module Header_Parser (
                     magic_buffer[7:0] <= data_in[15:8];
                     magic_buffer[15:8] <= data_in[7:0];
                 end
+                Frame_Header_Descriptor <= 8'b0;
+                Window_Descriptor <= 8'b0;
+                Dictionary_ID <= 32'b0;
+                Frame_Content_Size <= 64'b0;
+
                 Window_Descriptor_Bytes <= 1'b0;
                 Dictionary_ID_Bytes <= 3'b0;
                 Frame_Content_Size_Bytes <= 4'b0;
@@ -271,12 +276,15 @@ module Header_Parser (
         end
     end
 
-    assign finished = count >= Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes;
+    assign finished = state == READ_REMAINING_BYTES && count >= Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes;
     always_comb begin
         case (state)
             IDLE: begin
                 if (start) begin
                     next_state = READ_MAGIC_NUMBER;
+                end
+                else begin 
+                    next_state = IDLE;
                 end
             end
             READ_MAGIC_NUMBER: begin
