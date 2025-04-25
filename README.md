@@ -53,10 +53,17 @@ To process this input via a System Verilog simulation, it must be converted to a
 head -c 32 input.zst | xxd -p -c 2 > input.data
 ```
 
-| `Frame_Header_Descriptor` | `Window_Descriptor`   | `Dictionary_ID`   | `Frame_Content_Size`   |
-| :-----------------------: | :-------------------: | :---------------: | :--------------------: |
-| 1 byte                    | 1 byte                | 0 bytes           | 4 bytes                |
+
 
 
 We can use xxd to print two bytes (4 hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only print the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
 
+| `Frame_Header_Descriptor` | `Window_Descriptor`   | `Dictionary_ID`         | `Frame_Content_Size`    |
+| :-----------------------: | :-------------------: | :---------------------: | :---------------------: |
+| 1 byte                    | 1 byte                | 0 bytes (little-endian) | 4 bytes (little-endian) |
+| 0x84                      | 0x58                  | 0 bytes                 | 0x80000000              |
+
+
+Notes:
+- Bottom part of output vectors are empty if unused
+- If FCS_Field_Size == 2, receiver of data is responsible for adding the [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size).

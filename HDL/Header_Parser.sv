@@ -55,7 +55,7 @@ module Header_Parser (
                 Dictionary_ID_Bytes <= 3'b0;
                 Frame_Content_Size_Bytes <= 4'b0;
                 count <= 4'b0;
-                sizes <= 1'b0;
+                sizes <= 8'b0;
                 extra_byte <= 8'b0;
             end
             else if (state == READ_MAGIC_NUMBER) begin
@@ -97,9 +97,9 @@ module Header_Parser (
                     end
                 endcase
 
-
-                if (data_in[13] && (data_in[9:8] != 2'b00)) begin
-                    Dictionary_ID[7:0] <= data_in[7:0];
+                 // Dictionary_ID is second byte
+                if (data_in[13] && data_in[9:8] != 2'b00) begin
+                    Dictionary_ID[31:24] <= data_in[7:0]; // Little-endian
                 end
 
                 // Frame_Content_Size_flag
@@ -124,7 +124,7 @@ module Header_Parser (
 
                 // Read this if no Window_Descriptor_Bytes or Frame_Content_Size_Bytes available to read
                 if (data_in[5] && (data_in[9:8] == 2'b00) && (data_in[15:14] != 2'b00)) begin
-                    Frame_Content_Size[7:0] <= data_in[7:0];
+                    Frame_Content_Size[63:56] <= data_in[7:0]; // Little-endian
                 end
 
                 // First non-header byte has been read
@@ -133,21 +133,20 @@ module Header_Parser (
             end
 
             else if (state == READ_REMAINING_BYTES) begin
-                // Read Dictionary_ID_Bytes: Convert from little endian
+                // Read Dictionary_ID_Bytes: little-endian format
                 if (Window_Descriptor_Bytes + Dictionary_ID_Bytes > count) begin
-
                     case (count - Window_Descriptor_Bytes)
                         2'b00: begin
-                            Dictionary_ID[7:0] <= data_in[7:0];
+                            Dictionary_ID[31:24] <= data_in[7:0];
                         end
                         2'b01: begin
-                            Dictionary_ID[15:8] <= data_in[7:0];
-                        end
-                        2'b10: begin
                             Dictionary_ID[23:16] <= data_in[7:0];
                         end
+                        2'b10: begin
+                            Dictionary_ID[15:8] <= data_in[7:0];
+                        end
                         2'b11: begin
-                            Dictionary_ID[31:24] <= data_in[7:0];
+                            Dictionary_ID[7:0] <= data_in[7:0];
                         end
                     endcase
 
@@ -161,13 +160,13 @@ module Header_Parser (
                                 // Should not be reached
                             end
                             2'b01: begin
-                                Dictionary_ID[15:8] <= data_in[15:8];
-                            end
-                            2'b10: begin
                                 Dictionary_ID[23:16] <= data_in[15:8];
                             end
+                            2'b10: begin
+                                Dictionary_ID[15:8] <= data_in[15:8];
+                            end
                             2'b11: begin
-                                Dictionary_ID[31:24] <= data_in[15:8];
+                                Dictionary_ID[7:0] <= data_in[15:8];
                             end
                         endcase
                     end
@@ -175,28 +174,28 @@ module Header_Parser (
                     else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count + 1) begin
                         case (count + 1 - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
                             3'b000: begin
-                                Frame_Content_Size[7:0] <= data_in[15:8];
+                                Frame_Content_Size[63:56] <= data_in[15:8];
                             end
                             3'b001: begin
-                                Frame_Content_Size[15:8] <= data_in[15:8];
-                            end
-                            3'b010: begin
-                                Frame_Content_Size[23:16] <= data_in[15:8];
-                            end
-                            3'b011: begin
-                                Frame_Content_Size[31:24] <= data_in[15:8];
-                            end
-                            3'b100: begin
-                                Frame_Content_Size[39:32] <= data_in[15:8];
-                            end
-                            3'b101: begin
-                                Frame_Content_Size[47:40] <= data_in[15:8];
-                            end
-                            3'b110: begin
                                 Frame_Content_Size[55:48] <= data_in[15:8];
                             end
+                            3'b010: begin
+                                Frame_Content_Size[47:40] <= data_in[15:8];
+                            end
+                            3'b011: begin
+                                Frame_Content_Size[39:32] <= data_in[15:8];
+                            end
+                            3'b100: begin
+                                Frame_Content_Size[31:24] <= data_in[15:8];
+                            end
+                            3'b101: begin
+                                Frame_Content_Size[23:16] <= data_in[15:8];
+                            end
+                            3'b110: begin
+                                Frame_Content_Size[15:8] <= data_in[15:8];
+                            end
                             3'b111: begin
-                                Frame_Content_Size[63:56] <= data_in[15:8];
+                                Frame_Content_Size[7:0] <= data_in[15:8];
                             end
                         endcase
                     end
@@ -211,28 +210,28 @@ module Header_Parser (
                 else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count) begin
                     case (count - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
                        3'b000: begin
-                            Frame_Content_Size[7:0] <= data_in[7:0];
+                            Frame_Content_Size[63:56] <= data_in[7:0];
                         end
                         3'b001: begin
-                            Frame_Content_Size[15:8] <= data_in[7:0];
-                        end
-                        3'b010: begin
-                            Frame_Content_Size[23:16] <= data_in[7:0];
-                        end
-                        3'b011: begin
-                            Frame_Content_Size[31:24] <= data_in[7:0];
-                        end
-                        3'b100: begin
-                            Frame_Content_Size[39:32] <= data_in[7:0];
-                        end
-                        3'b101: begin
-                            Frame_Content_Size[47:40] <= data_in[7:0];
-                        end
-                        3'b110: begin
                             Frame_Content_Size[55:48] <= data_in[7:0];
                         end
+                        3'b010: begin
+                            Frame_Content_Size[47:40] <= data_in[7:0];
+                        end
+                        3'b011: begin
+                            Frame_Content_Size[39:32] <= data_in[7:0];
+                        end
+                        3'b100: begin
+                            Frame_Content_Size[31:24] <= data_in[7:0];
+                        end
+                        3'b101: begin
+                            Frame_Content_Size[23:16] <= data_in[7:0];
+                        end
+                        3'b110: begin
+                            Frame_Content_Size[15:8] <= data_in[7:0];
+                        end
                         3'b111: begin
-                            Frame_Content_Size[63:56] <= data_in[7:0];
+                            Frame_Content_Size[7:0] <= data_in[7:0];
                         end
                     endcase
 
@@ -240,28 +239,28 @@ module Header_Parser (
                     if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count + 1) begin
                         case (count + 1 - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
                             3'b000: begin
-                                Frame_Content_Size[7:0] <= data_in[15:8];
+                                // Should not be reached
                             end
                             3'b001: begin
-                                Frame_Content_Size[15:8] <= data_in[15:8];
-                            end
-                            3'b010: begin
-                                Frame_Content_Size[23:16] <= data_in[15:8];
-                            end
-                            3'b011: begin
-                                Frame_Content_Size[31:24] <= data_in[15:8];
-                            end
-                            3'b100: begin
-                                Frame_Content_Size[39:32] <= data_in[15:8];
-                            end
-                            3'b101: begin
-                                Frame_Content_Size[47:40] <= data_in[15:8];
-                            end
-                            3'b110: begin
                                 Frame_Content_Size[55:48] <= data_in[15:8];
                             end
+                            3'b010: begin
+                                Frame_Content_Size[47:40] <= data_in[15:8];
+                            end
+                            3'b011: begin
+                                Frame_Content_Size[39:32] <= data_in[15:8];
+                            end
+                            3'b100: begin
+                                Frame_Content_Size[31:24] <= data_in[15:8];
+                            end
+                            3'b101: begin
+                                Frame_Content_Size[23:16] <= data_in[15:8];
+                            end
+                            3'b110: begin
+                                Frame_Content_Size[15:8] <= data_in[15:8];
+                            end
                             3'b111: begin
-                                Frame_Content_Size[63:56] <= data_in[15:8];
+                                Frame_Content_Size[7:0] <= data_in[15:8];
                             end
                         endcase
                     end
@@ -307,3 +306,5 @@ module Header_Parser (
 endmodule
 
 // TODO: analyze power usage for saving calculations of byte index as logic vectors
+// TODO: convert to little endian
+// TODO: Fix FCS_Field_Size based on table in docs, just add at end (shifted appropriately)
