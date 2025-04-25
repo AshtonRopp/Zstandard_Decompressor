@@ -1,5 +1,5 @@
 # Introduction
-This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor. At this point in time, I have finished the header parser and plan to begin work on the huffman and entropy decoders. Further, I plan to use Cadence tools for place and route, timing analysis, and PPA.
+This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor. At this point in time, I have finished the header parser and plan to begin work on the huffman and entropy decoders. Further, I intend to use Cadence tools for place and route, timing analysis, and PPA.
 
 # Setup
 To install/make zstd and generate/compress the test file, source the below script.
@@ -72,12 +72,10 @@ We can analyze the test vector file and acquire the following table. Note, the f
 
 We can then run the simulation and compare the results. We can see that all expected values are present.
 
-
 | ![](Images/ModelSim.png) |
 |:--:|
 | *Simulation Results* |
 </center>
-
 
 ## Next Steps
 - **Continue work on decompression components**
@@ -87,5 +85,6 @@ We can then run the simulation and compare the results. We can see that all expe
 - **Interface header parser with future modules**
   - Use `sizes` output to read upper bytes and ignore unused lower ones
   -  If FCS_Field_Size == 2, receiver of data is responsible for adding an [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size)
+  -  Update repository to include a README and test bench for each subsystem
 - **Analyze PPA metrics**
   - Continue to learn PD tools over summer

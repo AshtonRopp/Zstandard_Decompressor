@@ -57,16 +57,15 @@ module tb_Header_Parser();
             end
         end
 
-        // repeat (10) @(posedge clk);
-
         $display("==== Results ====");
-        $display("Finished:               %0d", finished);
-        $display("Sizes:                  0x%0h", sizes);
+        $display("Finished:                %0d",   finished);
+        $display("Sizes:                   0x%0h", sizes);
         $display("Frame Header Descriptor: 0x%0h", Frame_Header_Descriptor);
-        $display("Window Descriptor:      0x%0h", Window_Descriptor);
-        $display("Dictionary ID:          0x%0h", Dictionary_ID);
-        $display("Frame Content Size:     0x%0h", Frame_Content_Size);
-        $display("Extra Byte:             0x%0h", extra_byte);
+        $display("Window Descriptor:       0x%0h", Window_Descriptor);
+        $display("Dictionary ID:           0x%0h", Dictionary_ID);
+        $display("Frame Content Size:      0x%0h", Frame_Content_Size);
+        $display("Extra Byte:              0x%0h", extra_byte);
+        $display("Warning: these results do NOT preserve trailing 0s");
         $finish;
     end
 endmodule
