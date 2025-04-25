@@ -35,7 +35,7 @@ From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84
 
 | Bit Number | Field Name                | Description                                        | input.zst Value     |
 | :--------: | :-----------------------: | :-----------------------------------------------:  | :-----------------: |
-| 7-6        | `Frame_Content_Size_flag` |  # bytes for `Frame_Content_Size` *                | 10                  |
+| 7-6        | `Frame_Content_Size_flag` |  Determines # bytes for `Frame_Content_Size` *     | 10                  |
 | 5          | `Single_Segment_flag`     |  Refer to docs - if high, skip `Window_Descriptor` | 0                   |
 | 4          | `Unused_bit`              |  Unused, value doesn't matter                      | 0                   |
 | 3          | `Reserved_bit`            |  Reserved, value must be 0                         | 0                   |
@@ -44,12 +44,19 @@ From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84
 
 \* Refer to zstd compression format page to determine number of bytes allocated based on flag
 
+
+
 ## Test Vector Setup
 To process this input via a System Verilog simulation, it must be converted to a test vector. This can be done via the below command.
 
 ```
 head -c 32 input.zst | xxd -p -c 2 > input.data
 ```
+
+| `Frame_Header_Descriptor` | `Window_Descriptor`   | `Dictionary_ID`   | `Frame_Content_Size`   |
+| :-----------------------: | :-------------------: | :---------------: | :--------------------: |
+| 1 byte                    | 1 byte                | 0 bytes           | 4 bytes                |
+
 
 We can use xxd to print two bytes (4 hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only print the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
 

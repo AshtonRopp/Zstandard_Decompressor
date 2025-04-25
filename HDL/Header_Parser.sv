@@ -63,23 +63,23 @@ module Header_Parser (
                 magic_buffer[31:24] <= data_in[7:0];
             end
             else if (state == READ_FRAME_HEADER_DESCRIPTOR) begin
-                Frame_Content_Size_flag <= data_in[7:6];
-                Single_Segment_flag <= data_in[5];
-                Content_Checksum_flag <= data_in[2];
-                Dictionary_ID_flag <= data_in[1:0];
+                Frame_Content_Size_flag <= data_in[15:14];
+                Single_Segment_flag <= data_in[13];
+                Content_Checksum_flag <= data_in[10];
+                Dictionary_ID_flag <= data_in[9:8];
 
-                Frame_Header_Descriptor <= data_in[7:0];
+                Frame_Header_Descriptor <= data_in[15:8];
 
                 // Find the remaining number of bytes
                 // Read Window_Descriptor_Bytes if present
-                if (!(data_in[5])) begin
+                if (!(data_in[13])) begin
                     Window_Descriptor_Bytes <= 1;
-                    Window_Descriptor <= data_in[15:8];
+                    Window_Descriptor <= data_in[7:0];
                     sizes[7] <= 1;
                 end
 
                 // Dictionary_ID_flag   
-                case (data_in[1:0])
+                case (data_in[9:8])
                     2'b00: begin
                         Dictionary_ID_Bytes <= 3'd0;
                     end
@@ -98,15 +98,15 @@ module Header_Parser (
                 endcase
 
 
-                if (data_in[5] && (data_in[1:0] != 2'b00)) begin
-                    Dictionary_ID[7:0] <= data_in[15:8];
+                if (data_in[13] && (data_in[9:8] != 2'b00)) begin
+                    Dictionary_ID[7:0] <= data_in[7:0];
                 end
 
                 // Frame_Content_Size_flag
-                case (data_in[7:6])
+                case (data_in[15:14])
                     2'b00: begin
-                        Frame_Content_Size_Bytes <= {3'b0, data_in[5]}; // Single_Segment_flag\
-                        sizes[3:0] <= {3'b0, data_in[5]};
+                        Frame_Content_Size_Bytes <= {3'b0, data_in[13]}; // Single_Segment_flag\
+                        sizes[3:0] <= {3'b0, data_in[13]};
                     end
                     2'b01: begin
                         Frame_Content_Size_Bytes <= 4'd2;
@@ -123,8 +123,8 @@ module Header_Parser (
                 endcase
 
                 // Read this if no Window_Descriptor_Bytes or Frame_Content_Size_Bytes available to read
-                if (data_in[5] && (data_in[1:0] == 2'b00) && (data_in[7:6] != 2'b00)) begin
-                    Frame_Content_Size[7:0] <= data_in[15:8];
+                if (data_in[5] && (data_in[9:8] == 2'b00) && (data_in[15:14] != 2'b00)) begin
+                    Frame_Content_Size[7:0] <= data_in[7:0];
                 end
 
                 // First non-header byte has been read
