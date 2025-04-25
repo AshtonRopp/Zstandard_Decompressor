@@ -304,7 +304,3 @@ module Header_Parser (
 
     end
 endmodule
-
-// TODO: analyze power usage for saving calculations of byte index as logic vectors
-// TODO: convert to little endian
-// TODO: Fix FCS_Field_Size based on table in docs, just add at end (shifted appropriately)

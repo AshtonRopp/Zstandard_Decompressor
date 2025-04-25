@@ -1,5 +1,8 @@
+# Introduction
+This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor. At this point in time, I have finished the header parser and plan to begin work on the huffman and entropy decoders. Further, I plan to use Cadence tools for place and route, timing analysis, and PPA.
+
 # Setup
-To install/make zstd, generate the test file, and compress the test file, source the below script.
+To install/make zstd, and generate/compress the test file, source the below script.
 
 ```
 source setup.sh
@@ -44,8 +47,6 @@ From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84
 
 \* Refer to zstd compression format page to determine number of bytes allocated based on flag
 
-
-
 ## Test Vector Setup
 To process this input via a System Verilog simulation, it must be converted to a test vector. This can be done via the below command.
 
@@ -53,16 +54,20 @@ To process this input via a System Verilog simulation, it must be converted to a
 head -c 32 input.zst | xxd -p -c 2 > input.data
 ```
 
+We can use xxd to print two bytes (4 hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only process the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
 
+We can analyze the test vector file and acquire the following table. Note, the first two lines are the "magic word" used to indicate this a zstd compressed file.
 
+| ![](Images/input_data.png) |
+|:--:|
+| *Test Vector Snippet Containing Header* |
+</center>
 
-We can use xxd to print two bytes (4 hex digits) per line. This can then easily be read into a test bench or instruction memory module. For this part of the project, to confirm functionality we only print the first 32 bytes. This is guaranteed to contain the entire header, but obviously not the rest of the compressed data.
 
 | `Frame_Header_Descriptor` | `Window_Descriptor`   | `Dictionary_ID`         | `Frame_Content_Size`    |
 | :-----------------------: | :-------------------: | :---------------------: | :---------------------: |
 | 1 byte                    | 1 byte                | 0 bytes (little-endian) | 4 bytes (little-endian) |
-| 0x84                      | 0x58                  | 0 bytes                 | 0x80000000              |
-
+| 0x84                      | 0x58                  | 0 bytes                 | 0x00008000              |
 
 Notes:
 - Bottom part of output vectors are empty if unused
