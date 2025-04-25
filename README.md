@@ -34,7 +34,7 @@ The reader is highly encouraged to read [this](https://github.com/facebook/zstd/
 | 1 byte                    | 0-1 byte              | 0-4 bytes         | 0-8 bytes              |
 
 ## `Frame_Header_Descriptor` Structure
-From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84 = 0b10000100. By analyzing this byte alone, we know exactly how much space to allocate for each component of the header, and thus can implement the header parser.
+From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84 = 0b10000100. By analyzing this byte alone, we know exactly how much space to allocate for each component of the header, and thus provide the header parser all the information that it needs.
 
 | Bit Number | Field Name                | Description                                        | input.zst Value     |
 | :--------: | :-----------------------: | :-----------------------------------------------:  | :-----------------: |
