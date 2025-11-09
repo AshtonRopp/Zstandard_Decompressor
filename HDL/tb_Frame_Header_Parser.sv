@@ -1,4 +1,4 @@
-module tb_Header_Parser();
+module tb_Frame_Header_Parser();
 
     logic clk = 0;
     always #5 clk = ~clk; // Clock toggles every 5ns
@@ -16,7 +16,7 @@ module tb_Header_Parser();
     logic [63:0] Frame_Content_Size;
     logic [7:0] extra_byte;
 
-    Header_Parser dut (
+    Frame_Header_Parser dut (
         .clk(clk),
         .reset(reset),
         .start(start),
@@ -34,7 +34,7 @@ module tb_Header_Parser();
     integer i;
 
     initial begin
-        $display("Starting Header_Parser test...");
+        $display("Starting Frame_Header_Parser test...");
         $readmemh("input.data", rom);
 
         reset = 1;

@@ -1,4 +1,4 @@
-module Header_Parser (
+module Frame_Header_Parser (
     input  logic        clk,
     input  logic        reset,
     input  logic        start,
