@@ -27,13 +27,21 @@ module Block_Header_Parser #(
     output logic                 size_exceed_err
 );
 
+    // Enum for block types
+    typedef enum logic [1:0] {
+        RAW_BLOCK        = 2'b00,
+        RLE_BLOCK        = 2'b01,
+        COMPRESSED_BLOCK = 2'b10,
+        RESERVED_BLOCK   = 2'b11
+    } block_type_e;
+
     assign in_ready = 1'b1; // always ready
 
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
             header_valid <= 1'b0;
             last_block <= 1'b0;
-            block_type <= 2'b00;
+            block_type <= RAW_BLOCK;
             block_size <= 21'd0;
             raw_header <= 24'd0;
             reserved_type_err <= 1'b0;
@@ -48,7 +56,7 @@ module Block_Header_Parser #(
             block_size <= {in_b2, in_b1, in_b0} >> 3;
 
             // Error flags
-            reserved_type_err <= (in_b0[2:1] == 2'b11);
+            reserved_type_err <= (in_b0[2:1] == RESERVED_BLOCK);
             size_exceed_err <= (({in_b2,in_b1,in_b0} >> 3) > BLOCK_MAX_LIMIT);
 
             header_valid <= 1'b1; // pulse high one cycle
