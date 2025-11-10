@@ -5,7 +5,7 @@ module Frame_Header_Parser (
     input  logic        clk,
     input  logic        reset,
     input  logic        start,
-    input  logic [15:0] data_in, // 2 bytes per cycle, big-endian
+    input  logic [15:0] data_in, // 2 bytes per cycle, little-endian
 
     output logic        finished,
     output logic [ 7:0] sizes, // {window bytes, dictionary ID bytes, FCS bytes}

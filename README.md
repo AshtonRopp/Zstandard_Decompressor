@@ -48,7 +48,7 @@ From the above output, we can see that the `Frame_Header_Descriptor` byte = 0x84
 \* Refer to zstd compression format page to determine number of bytes allocated based on flag
 
 ## Test Vector Setup
-To process this input via a System Verilog simulation, it must be converted to a test vector. This can be done via the below command.
+To process this input via a System Verilog simulation, it must be converted to a test vector. This can be done via the below command. Note: zstd uses little-endian format, and this command maintains that.
 
 ```
 head -c 32 input.zst | xxd -p -c 2 > input.data
