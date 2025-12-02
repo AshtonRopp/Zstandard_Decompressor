@@ -24,7 +24,7 @@ module Frame_Header_Parser (
     } state_t;
 
     state_t state, next_state;
-    logic [31:0] magic_number;
+    logic [31:0] magic_number; // Little-endian
     logic [2:0]  byte_index;
 
     logic [1:0] Frame_Content_Size_flag, Dictionary_ID_flag;
@@ -46,8 +46,8 @@ module Frame_Header_Parser (
             state <= next_state;
             if (state == IDLE) begin
                 if (start) begin
-                    magic_number[31:24] <= data_in[15:8];
-                    magic_number[23:16] <= data_in[7:0];
+                    magic_number[15:8] <= data_in[7:0];
+                    magic_number[7:0] <= data_in[15:8];
                 end
                 Frame_Header_Descriptor <= 8'b0;
                 Window_Descriptor <= 8'b0;
@@ -62,8 +62,8 @@ module Frame_Header_Parser (
                 extra_byte <= 8'b0;
             end
             else if (state == READ_MAGIC_NUMBER) begin
-                magic_number[15:8] <= data_in[15:8];
-                magic_number[7:0] <= data_in[7:0];
+                magic_number[31:24] <= data_in[7:0];
+                magic_number[23:16] <= data_in[15:8];
             end
             else if (state == READ_FRAME_HEADER_DESCRIPTOR) begin
                 Frame_Content_Size_flag <= data_in[15:14];
@@ -100,7 +100,7 @@ module Frame_Header_Parser (
                     end
                 endcase
 
-                 // Dictionary_ID is second byte
+                // Dictionary_ID is second byte
                 if (data_in[13] && data_in[9:8] != 2'b00) begin
                     Dictionary_ID[31:24] <= data_in[7:0]; // Little-endian
                 end
@@ -127,7 +127,7 @@ module Frame_Header_Parser (
 
                 // Read this if no Window_Descriptor_Bytes or Frame_Content_Size_Bytes available to read
                 if (data_in[5] && (data_in[9:8] == 2'b00) && (data_in[15:14] != 2'b00)) begin
-                    Frame_Content_Size[63:56] <= data_in[7:0]; // Little-endian
+                    Frame_Content_Size[7:0] <= data_in[7:0]; // Little-endian
                 end
 
                 // First non-header byte has been read
@@ -177,28 +177,28 @@ module Frame_Header_Parser (
                     else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count + 1) begin
                         case (count + 1 - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
                             3'b000: begin
-                                Frame_Content_Size[63:56] <= data_in[15:8];
+                                Frame_Content_Size[7:0] <= data_in[15:8];
                             end
                             3'b001: begin
-                                Frame_Content_Size[55:48] <= data_in[15:8];
-                            end
-                            3'b010: begin
-                                Frame_Content_Size[47:40] <= data_in[15:8];
-                            end
-                            3'b011: begin
-                                Frame_Content_Size[39:32] <= data_in[15:8];
-                            end
-                            3'b100: begin
-                                Frame_Content_Size[31:24] <= data_in[15:8];
-                            end
-                            3'b101: begin
-                                Frame_Content_Size[23:16] <= data_in[15:8];
-                            end
-                            3'b110: begin
                                 Frame_Content_Size[15:8] <= data_in[15:8];
                             end
+                            3'b010: begin
+                                Frame_Content_Size[23:16] <= data_in[15:8];
+                            end
+                            3'b011: begin
+                                Frame_Content_Size[31:24] <= data_in[15:8];
+                            end
+                            3'b100: begin
+                                Frame_Content_Size[39:32] <= data_in[15:8];
+                            end
+                            3'b101: begin
+                                Frame_Content_Size[47:40] <= data_in[15:8];
+                            end
+                            3'b110: begin
+                                Frame_Content_Size[55:48] <= data_in[15:8];
+                            end
                             3'b111: begin
-                                Frame_Content_Size[7:0] <= data_in[15:8];
+                                Frame_Content_Size[63:56] <= data_in[15:8];
                             end
                         endcase
                     end
@@ -213,28 +213,28 @@ module Frame_Header_Parser (
                 else if (Window_Descriptor_Bytes + Dictionary_ID_Bytes + Frame_Content_Size_Bytes > count) begin
                     case (count - Window_Descriptor_Bytes - Dictionary_ID_Bytes)
                        3'b000: begin
-                            Frame_Content_Size[63:56] <= data_in[7:0];
+                            Frame_Content_Size[7:0] <= data_in[15:8];
                         end
                         3'b001: begin
-                            Frame_Content_Size[55:48] <= data_in[7:0];
+                            Frame_Content_Size[15:8] <= data_in[15:8];
                         end
                         3'b010: begin
-                            Frame_Content_Size[47:40] <= data_in[7:0];
+                            Frame_Content_Size[23:16] <= data_in[15:8];
                         end
                         3'b011: begin
-                            Frame_Content_Size[39:32] <= data_in[7:0];
+                            Frame_Content_Size[31:24] <= data_in[15:8];
                         end
                         3'b100: begin
-                            Frame_Content_Size[31:24] <= data_in[7:0];
+                            Frame_Content_Size[39:32] <= data_in[15:8];
                         end
                         3'b101: begin
-                            Frame_Content_Size[23:16] <= data_in[7:0];
+                            Frame_Content_Size[47:40] <= data_in[15:8];
                         end
                         3'b110: begin
-                            Frame_Content_Size[15:8] <= data_in[7:0];
+                            Frame_Content_Size[55:48] <= data_in[15:8];
                         end
                         3'b111: begin
-                            Frame_Content_Size[7:0] <= data_in[7:0];
+                            Frame_Content_Size[63:56] <= data_in[15:8];
                         end
                     endcase
 
@@ -245,31 +245,31 @@ module Frame_Header_Parser (
                                 // Should not be reached
                             end
                             3'b001: begin
-                                Frame_Content_Size[55:48] <= data_in[15:8];
+                                Frame_Content_Size[15:8] <= data_in[7:0];
                             end
                             3'b010: begin
-                                Frame_Content_Size[47:40] <= data_in[15:8];
+                                Frame_Content_Size[23:16] <= data_in[7:0];
                             end
                             3'b011: begin
-                                Frame_Content_Size[39:32] <= data_in[15:8];
+                                Frame_Content_Size[31:24] <= data_in[7:0];
                             end
                             3'b100: begin
-                                Frame_Content_Size[31:24] <= data_in[15:8];
+                                Frame_Content_Size[39:32] <= data_in[7:0];
                             end
                             3'b101: begin
-                                Frame_Content_Size[23:16] <= data_in[15:8];
+                                Frame_Content_Size[47:40] <= data_in[7:0];
                             end
                             3'b110: begin
-                                Frame_Content_Size[15:8] <= data_in[15:8];
+                                Frame_Content_Size[55:48] <= data_in[7:0];
                             end
                             3'b111: begin
-                                Frame_Content_Size[7:0] <= data_in[15:8];
+                                Frame_Content_Size[63:56] <= data_in[7:0];
                             end
                         endcase
                     end
                     // FCS-Nothing
                     else begin
-                        extra_byte <= data_in[15:8];
+                        extra_byte <= data_in[7:0];
                     end
                 end
 
