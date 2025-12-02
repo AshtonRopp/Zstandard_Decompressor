@@ -1,5 +1,5 @@
 # Introduction
-This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor. At this point in time, I have finished the header parser and plan to begin work on the huffman and entropy decoders. Further, I intend to use Cadence tools for place and route, timing analysis, and PPA.
+This repository contains my ongoing work towards my master's project. The end goal is to create a System Verilog hardware implementation of a zstd decompressor.
 
 # Setup
 To install/make zstd and generate/compress the test file, source the below script.
@@ -8,7 +8,7 @@ To install/make zstd and generate/compress the test file, source the below scrip
 source setup.sh
 ```
 
-# Header Parser
+# Frame Header Parser
 zstd defines a frame (compressed file) as shown below. This table, and other key information, can be found [here](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#zstandard-frames).
 
 | `Magic_Number` | `Frame_Header` |`Data_Block`|  More Blocks   |  `Content_Checksum`  |
@@ -64,8 +64,8 @@ We can analyze this section of the test vector file and acquire the following ta
 8458
 0000
 8000
+...
 ```
-
 
 | `Frame_Header_Descriptor` | `Window_Descriptor`   | `Dictionary_ID`         | `Frame_Content_Size`    |
 | :-----------------------: | :-------------------: | :---------------------: | :---------------------: |
@@ -82,17 +82,35 @@ We can then run the simulation and compare the results. We can see that all expe
 
 
 # Block Header Parser
-After the RTL has deciphered the frame header, it must begin to process the blocks. Each block has a block header, so the next subsystem, `Block_Header_Parser`, will be responsible for that.
+After the RTL has deciphered the frame header, it must begin to process the blocks. Each block has a block header, so the next subsystem, `Block_Header_Parser`, will be 
+responsible for that.
+
+
+## Test Bench Setup
+I took the Frame Header test bench and added a Block Header parser to it. This uses the original test vector, and the `Block_Header_Parser` module picks up where the `Frame_Header_Parser` leaves off. We will check for the below expected values given the test vector snippet:
+```
+...
+8c07
+059a
+...
+```
+
+Therefore, the value outside of memory of those three bytes is 0x05078c = 0b000001010000011110001100.
+
+### Block Header Encoding (Converted from Little-Endian Memory):
+| `Block_Size`                 | `Block_Type` | `Last_Block` |
+|:----------------------------:|:------------:|:------------:|
+|  bits 23-3                   |  bits 2-1    |    bit 0     |
+|  0 0000 1010 0000 1111 0001  |      10      |      0       |
 
 
 # Next Steps
 - **Continue work on decompression components**
-  - Block header parser
   - Huffman decoder
   - FSE decoder
-- **Interface header parser with future modules**
+- **Interface header/block parser with future modules**
   - Use `sizes` output to read upper bytes and ignore unused lower ones
-  -  If FCS_Field_Size == 2, receiver of data is responsible for adding an [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size)
-  -  Update repository to include a README and test bench for each subsystem
-- **Analyze PPA metrics**
-  - Continue to learn PD tools over summer
+  - If FCS_Field_Size == 2, receiver of data is responsible for adding an [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size)
+  - Header Parser may have unused bytes, these will need propagated forward to the other modules.
+  
+

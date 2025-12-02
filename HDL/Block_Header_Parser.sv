@@ -9,8 +9,7 @@ module Block_Header_Parser #(
     input  logic                  reset,
 
     // Input: all three bytes at once, little-endian
-    input  logic                  in_valid,
-    output logic                  in_ready,
+    input  logic                  in_ready,
     input  logic [WIDTH_BYTE-1:0] in_b0,
     input  logic [WIDTH_BYTE-1:0] in_b1,
     input  logic [WIDTH_BYTE-1:0] in_b2,
@@ -20,7 +19,6 @@ module Block_Header_Parser #(
     output logic                 last_block,
     output logic [1:0]           block_type,
     output logic [20:0]          block_size,
-    output logic [23:0]          raw_header,
 
     // Error flags
     output logic                 reserved_type_err,
@@ -35,7 +33,15 @@ module Block_Header_Parser #(
         RESERVED_BLOCK   = 2'b11
     } block_type_e;
 
-    assign in_ready = 1'b1; // always ready
+
+    // Assemble 24-bit header as it appears in memory
+    logic [23:0] raw_header;
+    assign raw_header = {in_b0, in_b1, in_b2};
+
+    logic [23:0] little_endian_header;
+    assign little_endian_header = {raw_header[ 7: 4], raw_header[ 3: 0],
+                                   raw_header[15:12], raw_header[11: 8],
+                                   raw_header[23:20], raw_header[19:16]};
 
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
@@ -43,17 +49,14 @@ module Block_Header_Parser #(
             last_block <= 1'b0;
             block_type <= RAW_BLOCK;
             block_size <= 21'd0;
-            raw_header <= 24'd0;
             reserved_type_err <= 1'b0;
             size_exceed_err <= 1'b0;
-        end else if (in_valid && in_ready) begin
-            // Assemble little-endian 24-bit header
-            raw_header <= {in_b2, in_b1, in_b0};
+        end else if (in_ready) begin
 
             // Extract fields
-            last_block <= in_b0[0];
-            block_type <= in_b0[2:1];
-            block_size <= {in_b2, in_b1, in_b0} >> 3;
+            last_block <= little_endian_header[0];
+            block_type <= little_endian_header[2:1];
+            block_size <= little_endian_header[23:3];
 
             // Error flags
             reserved_type_err <= (in_b0[2:1] == RESERVED_BLOCK);
