@@ -77,13 +77,13 @@ We can then run the simulation and compare the results. We can see that all expe
 
 | ![](Images/FrameHeaderModelSim.png) |
 |:--:|
-| *Simulation Results* |
+| *Frame Header Simulation Results* |
 </center>
 
 
 # Block Header Parser
 After the RTL has deciphered the frame header, it must begin to process the blocks. Each block has a block header, so the next subsystem, `Block_Header_Parser`, will be 
-responsible for that.
+responsible for that. The block header consists of 3 bytes in little-endian format. Since it is fixed length, it is much less complicated than the frame header to deal with.
 
 
 ## Test Bench Setup
@@ -98,19 +98,24 @@ I took the Frame Header test bench and added a Block Header parser to it. This u
 Therefore, the value outside of memory of those three bytes is 0x05078c = 0b000001010000011110001100.
 
 ### Block Header Encoding (Converted from Little-Endian Memory):
-| `Block_Size`                 | `Block_Type` | `Last_Block` |
-|:----------------------------:|:------------:|:------------:|
-|  bits 23-3                   |  bits 2-1    |    bit 0     |
-|  0 0000 1010 0000 1111 0001  |      10      |      0       |
+| `Block_Size` | `Block_Type` | `Last_Block` |
+|:------------:|:------------:|:------------:|
+|  bits 23-3   |  bits 2-1    |    bit 0     |
+|  0xA0F1      |      10      |      0       |
+
+We can see that the HDL produces the expect values when running `tb_Block_Header_Parser.sv` in ModelSim.
+| ![](Images/BlockHeaderModelSim.png) |
+|:--:|
+| *Block Header Simulation Results* |
+</center>
 
 
 # Next Steps
 - **Continue work on decompression components**
   - Huffman decoder
   - FSE decoder
-- **Interface header/block parser with future modules**
+- **Interface header parser with future modules**
   - Use `sizes` output to read upper bytes and ignore unused lower ones
   - If FCS_Field_Size == 2, receiver of data is responsible for adding an [offset](https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#frame_content_size)
   - Header Parser may have unused bytes, these will need propagated forward to the other modules.
-  
 

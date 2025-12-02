@@ -44,7 +44,7 @@ module tb_Block_Header_Parser();
     logic [20:0]           block_size;
     logic                  reserved_type_err;
     logic                  size_exceed_err;
-    logic [7:0] extra_byte_bhp;
+    logic [7:0]            extra_byte_bhp;
 
     Block_Header_Parser #(
         .WIDTH_BYTE(8),
@@ -66,7 +66,6 @@ module tb_Block_Header_Parser();
         .reserved_type_err(reserved_type_err),
         .size_exceed_err  (size_exceed_err)
     );
-
 
 
     logic [15:0] rom [0:31];
@@ -95,6 +94,7 @@ module tb_Block_Header_Parser();
             if(i == 1) begin
                 start = 0;
             end
+
             if (i == 0) begin
                 start = 1;
             end
@@ -107,29 +107,23 @@ module tb_Block_Header_Parser();
                 in_b1 = rom[i-1][7:0];
                 block_cnt = 1;
             end
+
             else if (block_cnt == 1) begin
                 in_ready = 1;
                 in_b2 = rom[i-1][15:8];
                 extra_byte_bhp = rom[i-1][7:0];
                 block_cnt = 2;
             end
+
             else if (header_valid && block_cnt == 2) begin
                 break;
             end
+
             else begin
                 frame_h_data_in = rom[i];
             end
-        end
 
-        $display("==== Results ====");
-        $display("Sizes:                   0x%0h", sizes);
-        $display("Frame Header Descriptor: 0x%0h", Frame_Header_Descriptor);
-        $display("Window Descriptor:       0x%0h", Window_Descriptor);
-        $display("Dictionary ID:           0x%0h", Dictionary_ID);
-        $display("Frame Content Size:      0x%0h", Frame_Content_Size);
-        $display("Extra Byte:              0x%0h", extra_byte);
-        $display("Warning: these results do NOT preserve trailing 0s");
-        $finish;
+        end
 
     end
 
