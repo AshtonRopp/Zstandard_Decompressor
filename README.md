@@ -103,7 +103,7 @@ Therefore, the value outside of memory of those three bytes is 0x05078c = 0b0000
 |  bits 23-3   |  bits 2-1    |    bit 0     |
 |  0xA0F1      |      10      |      0       |
 
-We can see that the HDL produces the expect values when running `tb_Block_Header_Parser.sv` in ModelSim.
+We can see that the HDL produces the expected values when running `tb_Block_Header_Parser.sv` in ModelSim.
 | ![](Images/BlockHeaderModelSim.png) |
 |:--:|
 | *Block Header Simulation Results* |
